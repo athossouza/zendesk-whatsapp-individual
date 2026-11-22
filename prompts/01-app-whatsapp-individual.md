@@ -8,7 +8,7 @@
 ---
 
 ```text
-Crie do zero um aplicativo Zendesk chamado "WhatsApp Individual", na localização Top Navigation / top_bar, usando o próprio App Builder.
+Crie um aplicativo Zendesk chamado "WhatsApp Individual", na localização Top Navigation / top_bar, usando o próprio App Builder.
 
 Objetivo: o agente escolhe um WhatsApp remetente conectado à conta, informa um destinatário manualmente ou busca um usuário existente no Zendesk, seleciona um template aprovado, preenche os parâmetros, revisa e confirma UM envio individual pela Notification API do Sunshine Conversations. Depois do envio, o app registra o disparo no objeto personalizado do Zendesk Labs Notifications.
 

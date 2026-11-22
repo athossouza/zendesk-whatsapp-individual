@@ -1,6 +1,7 @@
 # Prompt 2 — App "Disparos WhatsApp do Solicitante" (barra lateral do ticket)
 
 > App complementar, **somente leitura**. Mostra no ticket o histórico de templates enviados ao solicitante.
+> Este é um segundo app opcional, já previsto no repositório. Seu código não veio no ZIP V17; o prompt foi preservado e precisa de homologação própria. As variações de telefone abaixo são para busca de histórico e não devem ser copiadas para a normalização de envio do app principal.
 > Copie **todo o bloco abaixo** e cole num **novo** app do App Builder.
 
 ---
@@ -67,4 +68,5 @@ Compile a versão e relate arquivos e decisões. Não publique.
 
 ## Depois que o App Builder terminar
 
-Publique, recarregue a aba do ticket (**Ctrl+Shift+R**) e abra um ticket cujo solicitante já recebeu um template pelo app WhatsApp Individual.
+Quando decidir publicar, recarregue a aba do ticket (**Cmd+Shift+R no Mac; Ctrl+Shift+R no Windows/Linux**) e abra um ticket cujo solicitante já recebeu um template pelo app WhatsApp Individual. Valide separadamente a correspondência de usuário e telefones, a paginação e as permissões.
+

@@ -3,7 +3,7 @@
 > Copie **todo o bloco abaixo** e cole na primeira mensagem de um novo app no **App Builder** do Zendesk (Central de administração → Aplicativos e integrações → Criador de aplicativos).
 > Antes, conclua os pré-requisitos de [`docs/01-pre-requisitos.md`](../docs/01-pre-requisitos.md).
 >
-> Este prompt reproduz a **V17** publicada na conta SKA (revisada a partir do código final), somando o prompt original de criação e todos os ajustes feitos depois.
+> Especificação consolidada a partir do pacote V17, da exportação do App Builder e do post original. Inclui os pré-requisitos dentro do próprio texto para copiar e colar. A geração e o funcionamento em outra conta ainda precisam ser validados; as melhorias sobre o pacote original estão documentadas na auditoria.
 
 ---
 
@@ -15,12 +15,32 @@ Objetivo: o agente escolhe um WhatsApp remetente conectado à conta, informa um 
 Implemente o aplicativo completo (não apenas interface ou dados simulados). Ao finalizar, informe o que foi verificado no código, o que foi testado na conta e o que depende de configuração ou de envio autorizado. Não publique e não envie mensagens durante a construção.
 
 ==================================================================
+PRÉ-REQUISITOS DA NOVA INSTÂNCIA — parte deste mesmo prompt
+==================================================================
+A implementação pressupõe:
+- App Builder disponível; Zendesk Messaging com WhatsApp conectado ao Sunshine Conversations e templates aprovados; acesso às APIs usadas abaixo.
+- Relay messaging app, do Zendesk Labs, instalado E configurado para o Sunshine Conversations desta conta. Seguir a documentação oficial: https://support.zendesk.com/hc/en-us/articles/7051551958426-Installing-and-using-the-Relay-messaging-app . Os parâmetros do Relay são próprios dele; não confundir seu token de autorização com os quatro parâmetros deste app.
+- Objetos personalizados ativados. Na instalação de referência são usados zendesk_labs_notifications_campaign_user (disparos), zendesk_labs_notifications_template (templates) e zendesk_labs_notifications_campaign (campanhas, que este app não cria nem edita). Conferir as keys reais na conta; só a presença dos objetos não comprova que o serviço de status do Relay está funcionando.
+- Em zendesk_labs_notifications_campaign_user, conferir os títulos, tipos e destinos: "Notification ID" (text/textarea/regexp), "Phone Number" (text/textarea/regexp), "User Name" (text/textarea/regexp), "User ID" (lookup para zen:user), "Campaign Template ID" (lookup para zen:custom_object:zendesk_labs_notifications_template), "Agente remetente" (text, key agent_sender), "Status" e "Conversation ID" (leitura pelo app). Preservar "Campaign ID" e "Notes"; o app não os grava. As keys notification_id, phone_number, user_name, user_id, template_id, status, conversation_id são referências esperadas: descobrir as keys reais pelos títulos conforme a seção 12.1, sem adivinhar.
+- "User ID" deve manter esse título. A V17 aceita também text/integer por compatibilidade, mas o requisito da nova instalação é lookup zen:user. Se já houver um campo incompatível, explicar a migração ao administrador: tipo/key não são alteráveis; excluir um campo apaga seus dados. Não excluir nem recriar automaticamente. Se o lookup já for correto, preservá-lo.
+- Criar manualmente, se faltar, o campo "Agente remetente", key agent_sender, tipo text. Ele recebe "Nome Completo (email@dominio)"; o campo notes deixou de ser usado na versão final.
+- Em zendesk_labs_notifications_template, campos "Template" e "Channels" com JSON legível (text/textarea/regexp). Para preencher template_id deve existir um registro inequívoco com o nome/idioma do template e o canal correto. Um template aprovado na Meta não garante que exista esse registro no objeto do Relay. Não criar template/campanha para corrigir ausência.
+- O campo padrão Name do objeto de disparos precisa de numeração automática, pois o upsert não envia name. Campos adicionais obrigatórios não preenchidos por este app podem impedir a criação; verificar e explicar sem alterar schema.
+- Agentes: leitura de usuários/identidades, campos e registros dos objetos; criação E edição dos registros de campaign_user, pois PATCH por external_id também pode criar. Testar com um agente que realmente usará o app, além do administrador.
+- App ID, Key ID, segredo e região da própria instância, configurados nos parâmetros seguros/de instalação, nunca neste prompt.
+
+Implementar diagnóstico inicial somente leitura, separado das consultas Sunshine: ler schemas paginados dos dois objetos e verificar campos, tipos, destinos de lookup e Name com properties.autoincrement_enabled. Mostrar "Pré-requisitos do registro: OK", avisos específicos ou "Não verificado" quando não houver acesso. Incluir uma lista curta das ações manuais acima. Permitir "Verificar novamente" invalidando o cache de schema. Não instalar Relay, criar/excluir campos ou alterar permissões por conta própria. Uma falha de registro não deve impedir a consulta/envio Sunshine, mas o app não pode ser declarado integralmente pronto enquanto houver pendências. Não afirmar que Relay foi confirmado apenas por schemas ou GETs: sua atualização assíncrona exige teste autorizado.
+
+O prompt cria o app top_bar completo. O app de histórico na sidebar é separado e opcional; não faz parte deste pacote V17 nem é necessário para enviar e registrar.
+
+==================================================================
 0) REGRAS DE CONSTRUÇÃO (obrigatórias)
 ==================================================================
 - Português do Brasil com acentos, Zendesk Garden, temas claro e escuro.
 - Módulos pequenos por responsabilidade: constants.js; utils/sunshine.js (transporte); utils/errors.js; utils/hooks.js; utils/template.js (análise, prévia, payload); utils/phone.js; utils/urls.js; utils/validation.js; utils/support.js (consultas Support); utils/enrich/* (registro no objeto); components/* (InitStatus, SenderSelect, RecipientSection, RecipientPhone, UserSearch, SelectedRecipient, TemplateSelect, TemplateFields, MessagePreview, ReviewStep, ResultPanel, EnrichmentStatus, ErrorNotice).
 - Edite arquivos em SEQUÊNCIA. Nunca faça edits paralelos no mesmo arquivo; se um editFile não persistir, reescreva o arquivo inteiro.
 - Todo <Alert> do Garden (e qualquer componente que use React.Children.only) deve ter UM ÚNICO elemento filho: envolva o conteúdo em <div>. Texto com valor dinâmico vai dentro de <span>. (Evita "React.Children.only expected to receive a single React element child".)
+- Nos erros de RecipientPhone e TemplateFields, usar um <p> nativo estilizado com tokens do tema, id ligado por aria-describedby e role="alert". Preservar a correção da V17 que substituiu Field.Message nesses campos. Botões de ação com alturas consistentes e gap de 8 px.
 - Painel inicial 440 x 600 px, definido UMA vez em index.jsx com client.invoke('resize', { width: '440px', height: '600px' }). Não fazer outro resize no App.jsx. Rolagem vertical permitida, sem rolagem horizontal.
 - mock.js para a prévia do App Builder: marque o cliente com __isMock; o app mostra "Prévia fora do Zendesk" e não simula conexão real.
 - Registre na memória do App Builder as decisões de autenticação, hosts, paginação, tipos suportados e limitações (sem credenciais).
@@ -62,7 +82,7 @@ Função única scRequest(config, { path, method, query, body }):
     // com body: contentType 'application/json' e data JSON.stringify(body)
   })
 - O proxy ZAF gera o Base64 de keyId:secret fora do navegador. Nunca enviar "Basic keyId:secret" em texto, nunca btoa com o segredo, nunca copiar o segredo para estado, storage, logs ou erros.
-- Manifest: scKeySecret secure. Tente declarar scopes ["basic_auth"] e domainWhitelist com o host da região; se o App Builder não permitir editar o manifest, avise. (Na V17 em produção o manifest ficou com domainWhitelist [] e sem scopes, e a autenticação funcionou; se aparecer "Invalid authorization header format", revise esses dois itens.)
+- Manifest: scKeySecret com secure: true e scopes: ["basic_auth_password"] DENTRO do objeto desse parâmetro. domainWhitelist no topo do manifest, com os nomes api.smooch.io e api.eu-1.smooch.io SEM https:// ou caminhos. Permitir os dois hosts suporta ambas as regiões; a função usa exclusivamente o host configurado. Exemplo dos trechos relevantes: { domainWhitelist: ["api.smooch.io", "api.eu-1.smooch.io"], parameters: [{ name: "scKeySecret", type: "text", secure: true, required: true, scopes: ["basic_auth_password"] }] }. Preservar os demais parâmetros, bootstrap e location do App Builder. Se o ambiente não permitir esse ajuste, informar exatamente o que falta, sem expor o segredo e sem alegar autenticação testada. O ZIP V17 tem domainWhitelist vazio e não declara scopes; a ausência de scopes permite qualquer escopo segundo o ZAF, mas não é o padrão recomendado para novas contas. Não usar scopes: ["basic_auth"]: esse nome não consta nos escopos documentados; o correto para este segredo é basic_auth_password. Conferir a documentação oficial: https://developer.zendesk.com/documentation/apps/app-developer-guide/making-api-requests-from-a-zendesk-app/ .
 
 ==================================================================
 4) REMETENTES (WhatsApp)
@@ -121,7 +141,7 @@ Payload (buildPayload) para POST /v1.1/apps/{appId}/notifications:
     namespace (só se o template tiver),
     components (só se houver parâmetros) } }
 }
-- header: parâmetros de texto, ou { type: 'image'|'video'|'document', <tipo>: { link, filename (só documento e se informado) } }.
+- header: parâmetros { type: 'text', text } com parameter_name quando nomeados, ou { type: 'image'|'video'|'document', <tipo>: { link, filename (só documento e se informado) } }.
 - body: parâmetros { type: 'text', text } + parameter_name quando o formato for nomeado.
 - quick_reply: { type: 'button', sub_type: 'quick_reply', index: String(i), parameters: [{ type: 'payload', payload }] }.
 - URL dinâmica: { type: 'button', sub_type: 'url', index: String(i), parameters: [{ type: 'text', text: valor }] }.
@@ -199,15 +219,17 @@ Todas as chamadas pela sessão do agente (client.request, caminhos relativos /ap
   b) Com o notificationId em mãos, IMEDIATAMENTE fazer UPSERT:
      PATCH /api/v2/custom_objects/zendesk_labs_notifications_campaign_user/records?external_id={encodeURIComponent(notificationId)}
      { custom_object_record: { external_id: notificationId, custom_object_fields: { ...campos 12.3 } } }
-     Nunca POST. (O Notifications faz upsert no MESMO registro, então não há duplicidade.)
+     Nunca POST de criação. O serviço de referência usa o mesmo external_id; verificar a correlação na nova conta. Não prometer ausência de duplicidade sem essa verificação. O PATCH pode CRIAR um registro: precisa de permissão de criação além de edição.
   c) Sucesso → "Detalhes registrados" na hora, com os avisos de campo/template.
   d) Em segundo plano, sem travar a tela: a cada 3 s por até 90 s, GET .../records?filter[external_ids]={notificationId}&page[size]=100, exigindo external_id idêntico:
      - 1 registro com status OU conversation_id preenchido → linha discreta "Notifications confirmou: status <status>" (sem status: "conversa registrada");
      - mais de 1 registro → aviso de duplicidade e parar;
-     - 90 s sem atualização → "Notifications ainda não atualizou o registro" + console.log com notificationId, quantidade de registros, campos lidos, chaves usadas e último erro.
-  e) Se o upsert falhar: console.log e FALLBACK — esperar o registro do Notifications com espera crescente 1, 2, 3, 4, 5, 5, 5, 5 s por até 60 s (exigir unicidade; 401/403/404/422 param na hora, rede/429/5xx tentam de novo) e fazer PATCH /records/{id} só com os campos que mudaram.
+     - 90 s sem atualização → "Notifications ainda não atualizou o registro". Diagnóstico em console limitado a notificationId, contagem, presença de status/conversation_id e status HTTP sanitizado; nunca registrar o objeto de erro ou os campos completos do registro.
+  e) Se o upsert falhar: registrar só diagnóstico sanitizado e FALLBACK — esperar o registro do Notifications com espera crescente 1, 2, 3, 4, 5 s e depois 5 s por até 60 s (exigir unicidade; 401/403/404/422 param na hora, rede/429/5xx tentam de novo) e fazer PATCH /records/{id} só com os campos que mudaram. As esperas pertencem ao app e não podem travar a interface. Controlar o prazo incluindo requisições em andamento; respeitar Retry-After em leituras limitadas por 429, sem exceder o prazo.
   f) Erros viram mensagens claras (401, 403, 404, 422, 429, 5xx, rede).
   g) UI: abaixo da confirmação, "Registrando detalhes…" → "Detalhes registrados" ou "Registro pendente" com "Tentar registrar novamente" (refaz SÓ o registro) ao lado de "Novo envio". Ao clicar "Novo envio", tudo que ainda estiver rodando deixa de atualizar a tela (isStale).
+  h) Não implementar appendNote, notes.js no fluxo, reaplicação de notes, guard ou watcher que faça escrita. O watcher só lê e encerra na primeira confirmação; não acompanha delivered/read continuamente. Verificar stale antes de cada escrita e após cada await; cancelar timers na desmontagem. Uma requisição já enviada pode terminar, mas não deve lançar novos passos nem atualizar a tela antiga.
+  i) Listagens devem tratar paginação/cursor repetido e truncamento. Se não for possível concluir a lista de schemas, não declarar o mapeamento completo; se não for possível concluir a busca de candidatos de template, não vincular um candidato aparentemente único.
 
 ==================================================================
 13) LIMITES
@@ -219,6 +241,7 @@ Não implemente: campanhas, CSV ou envio em massa; agendamento; servidor externo
 ==================================================================
 Verifique no código e na montagem do payload: HEADER e BODY com {{1}} e valores diferentes; variáveis nomeadas com parameter_name; índices de botões; URL dinâmica sem url_type; valores com $; template sem variáveis; campos vazios; URL HTTPS incompleta ou privada; componente desconhecido; OTP; template com HTML no texto; telefone inválido; respostas antigas ignoradas; clique duplo; timeout sem repetição; telefones "55 (51) 98063-5211", "555192563778", "55 (11) 48717600" e "051995445802".
 Com a configuração de teste preenchida, valide na conta: autenticação pelo proxy, listagem de remetentes, paginação de templates, busca de usuários, escolha entre vários telefones, desvínculo ao editar o número, mídia e botões, prévia, revisão e dimensões do painel. Nada de dados fictícios como prova de integração. Envio real só com destinatário e mensagem autorizados.
+Verifique também: pré-requisitos ausentes, HTTP 403 com agente comum, campo User ID com destino incorreto, agent_sender ausente, Name sem numeração automática, campos extras obrigatórios, template ausente/ambíguo/canal diferente/lista truncada, envio manual sem user_id/user_name, segredo nunca lido, upsert 200/201, fallback e retry sem novo POST Sunshine, nenhuma escrita em notes/status/conversation_id/campaign_id/name, watcher somente leitura, aviso de duplicidade, timeout de 90 s e Novo envio/desmontagem durante registro. Não envie mensagem nem crie registros de prova para testar automaticamente as escritas; use testes isolados com respostas simuladas, identificados como tais.
 Entregue: arquivos criados, decisões, o que não foi testado e o que eu preciso ajustar manualmente (parâmetros, manifest).
 ```
 
@@ -227,9 +250,17 @@ Entregue: arquivos criados, decisões, o que não foi testado e o que eu preciso
 ## Depois que o App Builder terminar
 
 1. Em **Configurações** do app gerado, preencha `scAppId`, `scKeyId`, `scKeySecret` e `scRegion`.
-2. Publique com **Atualizar (Republicar)** e recarregue a aba do Agent Workspace (**Ctrl+Shift+R**). Sem recarregar, o agente continua rodando o código antigo.
-3. Faça um envio de teste para um número seu e confira o registro conforme [`docs/02-validacao.md`](../docs/02-validacao.md).
-4. Se aparecer **"Problema no cabeçalho de autenticação"**, revise `scopes: ["basic_auth"]` e o `domainWhitelist` do manifest.
+2. Confira o diagnóstico de pré-requisitos e faça a validação sem envio. Teste com a sessão de um agente comum.
+3. Quando decidir publicar, use **Publicar/Atualizar** e recarregue a aba do Agent Workspace (**Cmd+Shift+R no Mac; Ctrl+Shift+R no Windows/Linux**).
+4. Faça um envio de teste autorizado e confira o registro conforme [`docs/02-validacao.md`](../docs/02-validacao.md). Somente esse teste verifica a integração assíncrona com o Relay da nova conta.
+5. Se aparecer **"Problema no cabeçalho de autenticação"**, confira `scopes` no parâmetro seguro e `domainWhitelist` sem protocolo, além da região e do transporte pelo proxy.
 
-## Diferença intencional em relação à V17
-- **Espera do fallback:** 60 s em vez de 30 s. Nos testes, o Notifications levou até ~44 s para criar o registro.
+## Diferenças intencionais em relação ao ZIP V17
+
+- Pré-requisitos no próprio prompt e diagnóstico de schema somente leitura, com atualização de cache.
+- Manifesto com a configuração documentada de secure settings, sem copiar as omissões do ZIP.
+- Fallback de até 60 s; o código do ZIP usa 30 s. O relato de aproximadamente 44 s veio da documentação anterior do repositório, sem medição independente nesta auditoria.
+- Diagnósticos sem objetos completos de erro/registro e tratamento explícito de truncamento/cancelamento.
+
+Confira a [auditoria e seus limites](../docs/03-auditoria-v17.md). Gerar com o mesmo prompt não garante código idêntico nem dispensa configurar a instância.
+

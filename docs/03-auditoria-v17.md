@@ -55,7 +55,7 @@ As instruções dentro do post/conversa foram tratadas como material histórico 
 | Logs | Bundle imprime erro completo no fallback e campos completos no timeout | Prompt exige diagnóstico restrito e sanitizado; ZIP original não foi alterado |
 | Truncamento/schema | `listPaged` devolve truncated; carga do schema ignora esse sinal | Prompt exige não declarar schema completo após corte; reforçado cache invalidável e cancelamento |
 | Dois resizes | HTML faz 100% × 550 antes de Entry fazer 440 × 600 | Prompt mantém tamanho consistente no bootstrap; divergência preservada no ZIP |
-| Sidebar | Segundo prompt existente, sem código no anexo | Mantido como complemento opcional, sem alegar que foi homologado pela V17 |
+| Sidebar | Segundo prompt existente, sem código no anexo da primeira etapa | Mantido como complemento opcional, sem alegar que foi homologado pela V17 |
 | Reprodução garantida | README prometia qualquer instância e ausência de duplicidade | Qualificadas as dependências e a necessidade de conferir o mesmo External ID no Relay |
 
 Os escopos documentados incluem `basic_auth_username` e `basic_auth_password`; **`basic_auth` não é um nome de scope documentado**. A ausência de scopes permite qualquer escopo, portanto sua omissão no ZIP, isoladamente, não demonstra falha de autenticação. Veja [definição dos escopos](https://developer.zendesk.com/documentation/apps/getting-started/setting-up-new-apps/#scopes).
@@ -80,3 +80,8 @@ Para atualizar o texto puro após editar o bloco do prompt: `node scripts/verifi
 - Se desejar o histórico no ticket, gerar e homologar o app complementar separadamente.
 
 O [guia oficial do Relay](https://support.zendesk.com/hc/en-us/articles/7051551958426-Installing-and-using-the-Relay-messaging-app) sustenta os requisitos gerais de instalação, mas não comprova as keys internas nem a preservação de campos customizados na nova conta. Estes pontos vêm do pacote e histórico fornecidos e precisam de verificação operacional.
+
+
+## Atualização: referência da sidebar recebida
+
+Após esta auditoria inicial, Athos forneceu o ZIP V3 e a conversa completa da sidebar. A falta dessa referência foi resolvida: consulte a [auditoria própria da V3](05-auditoria-sidebar-v3.md). As observações acima sobre ausência de código da sidebar descrevem a primeira etapa, não a situação atual. Os visuais do README foram ajustados para composições estáticas, conforme a preferência esclarecida pelo autor.

@@ -23,11 +23,9 @@ Quem trabalha com suporte, relacionamento e Customer Success precisa iniciar con
 | Saber o que foi enviado ao solicitante | Histórico no ticket com template, data, agente remetente e status disponível |
 | Adaptar à realidade da equipe | Prompts e documentação para continuar a evolução pelo App Builder |
 
-## Veja os apps em funcionamento
+## Conheça os dois apps
 
-![Apresentação animada das telas reais: WhatsApp Individual na barra superior, histórico de disparos no ticket e prompts para recriar os apps](docs/assets/whatsapp-zendesk-demo.gif)
-
-*Motion graphics a partir de capturas reais. Nenhuma mensagem foi enviada para produzir estas imagens. Os dados pessoais foram ocultados; o histórico combina recortes da mesma tela em duas posições de rolagem. A animação apresenta as interfaces, sem simular um disparo ou uma mudança de status.*
+*Composições gráficas estáticas com capturas reais. Os dados pessoais foram ocultados e nenhuma mensagem foi enviada para produzir as imagens. A captura do histórico combina recortes do mesmo painel em duas posições de rolagem.*
 
 ### 1. WhatsApp Individual — envie pela barra superior
 
@@ -35,7 +33,7 @@ O agente escolhe o WhatsApp remetente, busca um usuário ou informa o telefone, 
 
 O app contempla variáveis de texto, cabeçalhos com imagem, vídeo ou documento por URL HTTPS e os tipos de botões documentados. Templates incompatíveis continuam visíveis com o motivo do bloqueio. A busca considera os telefones do cadastro e as identidades telefônicas, permitindo escolher quando houver vários números.
 
-<p align="center"><img src="docs/assets/whatsapp-individual-app-envio.png" width="420" alt="Tela real do app WhatsApp Individual no Zendesk, com seleção de remetente, busca do destinatário e seleção de template"></p>
+![Composição gráfica estática do WhatsApp Individual no Zendesk, com captura real da seleção de remetente, destinatário e template](docs/assets/whatsapp-individual-envio-showcase.png)
 
 **[Abrir o prompt completo do WhatsApp Individual →](prompts/01-app-whatsapp-individual.txt)**
 
@@ -43,18 +41,18 @@ O app contempla variáveis de texto, cabeçalhos com imagem, vídeo ou documento
 
 O segundo app é somente leitura. Ele reúne os disparos encontrados para o solicitante, com nome e conteúdo do template, data e hora, agente remetente, telefone, destinatário e status registrado. A interface tem busca, filtros de período e link para o registro do objeto personalizado.
 
-<p align="center"><img src="docs/assets/whatsapp-individual-historico-ticket.png" width="480" alt="Histórico de disparos WhatsApp no ticket Zendesk, com busca, filtros de período, template e status Lido; dados pessoais ocultos"></p>
+![Composição gráfica estática do histórico WhatsApp no ticket Zendesk, com captura real dos filtros, template e status; dados pessoais ocultos](docs/assets/whatsapp-individual-historico-showcase.png)
 
 **[Abrir o prompt do histórico na sidebar →](prompts/02-app-disparos-sidebar.md)**
 
-O histórico é opcional e usa um app separado. As telas acima mostram os apps instalados; a geração em outra instância precisa ser validada. O código da sidebar não faz parte do ZIP V17 do app de envio.
+O histórico é opcional e usa um app separado. Agora há referência dos **dois apps**: V17 do envio e **V3 da sidebar**, ambas analisadas com suas conversas do App Builder. As telas mostram os apps instalados; a geração em outra instância precisa ser validada. Confira a [auditoria da V3 e as melhorias do prompt](docs/05-auditoria-sidebar-v3.md).
 
 ## Como criar os apps na sua instância Zendesk
 
 1. **Prepare a conta.** Confira [canal WhatsApp, Relay, objetos personalizados, campos e permissões](docs/01-pre-requisitos.md).
 2. **Crie o app de envio.** Abra o Zendesk App Builder, inicie um app e cole todo o [prompt em texto puro](prompts/01-app-whatsapp-individual.txt). Ele já inclui os requisitos e o diagnóstico esperado da nova conta.
 3. **Configure a conexão.** Preencha `scAppId`, `scKeyId`, `scKeySecret` seguro e `scRegion` com os valores do Sunshine Conversations da própria instância. Não cole credenciais no prompt.
-4. **Crie o histórico, se desejar.** Cole o [segundo prompt](prompts/02-app-disparos-sidebar.md) em outro app, na localização `ticket_sidebar`.
+4. **Crie o histórico, se desejar.** Cole o [segundo prompt em texto puro](prompts/02-app-disparos-sidebar.txt) em outro app, na localização `ticket_sidebar`.
 5. **Valide antes de liberar para a equipe.** Siga o [roteiro de testes](docs/02-validacao.md), incluindo permissões de um agente comum e um envio controlado autorizado. Depois de publicar, recarregue o Agent Workspace.
 
 **Copiar e colar inicia a construção; a configuração da instância e a validação continuam necessárias.** O App Builder pode gerar implementações diferentes a partir do mesmo prompt.
@@ -118,24 +116,28 @@ Ele exibe o status disponível no registro, atualizado pelo serviço Notificatio
 
 Sim. Os prompts foram organizados para que o administrador consiga recriar e adaptar a solução. Toda nova geração ou alteração deve passar pela validação da conta; o mesmo texto não garante código idêntico.
 
-## Prompts, referência e validação técnica
+## Prompts, referências e validação técnica
 
 | Material | Conteúdo |
 |---|---|
 | [Prompt do app de envio — texto puro](prompts/01-app-whatsapp-individual.txt) | Bloco completo para copiar e colar |
 | [Prompt do app de envio — versão comentada](prompts/01-app-whatsapp-individual.md) | Instruções de uso e diferenças intencionais da V17 |
-| [Prompt do histórico no ticket](prompts/02-app-disparos-sidebar.md) | Segundo app, somente leitura |
+| [Prompt do histórico — texto puro](prompts/02-app-disparos-sidebar.txt) | Segundo app, somente leitura, consolidado com a V3 |
+| [Prompt do histórico — versão comentada](prompts/02-app-disparos-sidebar.md) | Instruções e diferenças intencionais da V3 |
 | [Pré-requisitos](docs/01-pre-requisitos.md) | Relay, schemas, campos, credenciais e permissões |
 | [Roteiro de validação](docs/02-validacao.md) | Testes na conta e solução de problemas |
 | [Auditoria V17](docs/03-auditoria-v17.md) | Comparação entre post, conversa do App Builder, pacote e GitHub |
 | [Pacote V17 original](reference/whatsappIndividual-V17.zip) | Referência preservada; [hash e limites](reference/README.md) |
-| [Visuais do README](docs/04-visuais-e-descoberta.md) | Origem das capturas, privacidade e produção da animação |
+| [Auditoria da sidebar V3](docs/05-auditoria-sidebar-v3.md) | Código, conversa, lacunas e requisitos de correção |
+| [Pacote V3 original da sidebar](reference/disparosWhatsappDoSolicitante-V3.zip) | Referência preservada, sem alterar o app instalado |
+| [Visuais do README](docs/04-visuais-e-descoberta.md) | Composições gráficas estáticas, origem das capturas e privacidade |
 | [Resumo para ferramentas de IA](llms.txt) | Mapa factual dos principais documentos |
 
-A auditoria inclui **20 cenários locais** sobre o bundle V17, executados sem rede. Eles não substituem testes de interface, autenticação e integração na instância de destino. Para reproduzir, use Node.js 18+ e `unzip`:
+A auditoria inclui **20 cenários locais da V17**, além de **20 verificações de comportamento e 6 limitações confirmadas da sidebar V3**, executados sem rede. Eles não substituem testes de interface, autenticação e integração na instância de destino. Para reproduzir, use Node.js 18+ e `unzip`:
 
 ```sh
 node scripts/verificar.mjs
+node scripts/verificar-sidebar.mjs
 ```
 
 ## Quer adaptar ao seu atendimento?
@@ -153,3 +155,4 @@ Leia também a [história da criação do app com Zendesk App Builder e o prompt
 ### English summary
 
 WhatsApp Individual is a Zendesk App Builder project for sending individual approved WhatsApp templates through Sunshine Conversations. A companion ticket sidebar app displays the requester's notification history using Zendesk Labs Relay custom objects. This repository provides reusable prompts, setup requirements and validation guidance; deployment requires account-specific configuration and testing.
+

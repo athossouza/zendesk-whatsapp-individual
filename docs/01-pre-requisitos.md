@@ -81,3 +81,12 @@ O transporte usa `Basic {{basic_auth.token}}` e `{{setting.scKeySecret}}` pelo p
 - Verificar em envio autorizado que app e Notifications usam **External ID = notificationId** e atualizam o mesmo registro. Status e Conversation ID devem vir do serviço. O app não instala webhooks nem altera roteamento para obter isso.
 
 Sem esses testes, a integração está especificada e revisada, mas não homologada na nova instância. Continue pelo [roteiro de validação](02-validacao.md).
+
+
+## 6. Particularidades do app de histórico
+
+O [Disparos WhatsApp do Solicitante](../prompts/02-app-disparos-sidebar.txt) é outro app, em `ticket_sidebar`. A referência V3 não declara parâmetros de credenciais: suas consultas usam a sessão do agente. Basta acesso de leitura aos usuários/identidades, schemas e registros dos dois objetos; permissões de criação/edição são exigidas pelo app de envio, não pela sidebar.
+
+Confira `phone_number`, `user_id`, `template_id`, `agent_sender`, `user_name` e `status` no objeto de disparos, e `template` no objeto de templates. O novo prompt pede verificação dos schemas e dos destinos de lookup; o ZIP V3 original usa keys fixas. O histórico mostra a definição textual do template com marcadores, não necessariamente a mensagem personalizada com os valores efetivamente enviados.
+
+A análise do pacote e da conversa está na [auditoria da sidebar V3](05-auditoria-sidebar-v3.md).

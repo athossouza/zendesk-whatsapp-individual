@@ -1,72 +1,99 @@
-# Prompt 2 — App "Disparos WhatsApp do Solicitante" (barra lateral do ticket)
+# Prompt 2 — Disparos WhatsApp do Solicitante (sidebar do ticket)
 
-> App complementar, **somente leitura**. Mostra no ticket o histórico de templates enviados ao solicitante.
-> Este é um segundo app opcional, já previsto no repositório. Seu código não veio no ZIP V17; o prompt foi preservado e precisa de homologação própria. As variações de telefone abaixo são para busca de histórico e não devem ser copiadas para a normalização de envio do app principal.
-> Copie **todo o bloco abaixo** e cole num **novo** app do App Builder.
-
----
+> Copie todo o [prompt em texto puro](02-app-disparos-sidebar.txt) e cole na primeira mensagem de um **novo app** no Zendesk App Builder.
+>
+> Consolidado com a conversa completa de 8 mensagens e o pacote **V3** da sidebar. As correções adicionais para uma nova geração estão identificadas na [auditoria da V3](../docs/05-auditoria-sidebar-v3.md). O ZIP original permanece preservado.
 
 ```text
-Crie um app de SIDEBAR DO TICKET (location: ticket_sidebar) chamado "Disparos WhatsApp do Solicitante", que lista os envios individuais de templates WhatsApp feitos para o solicitante do ticket. Os envios ficam no objeto personalizado zendesk_labs_notifications_campaign_user. O app é SOMENTE LEITURA: nunca cria, altera nem apaga registros. Interface em português do Brasil, React + Zendesk Garden, respeitando o tema claro/escuro do Zendesk (getColor/tokens do tema, nada de cores fixas). Em todo <Alert> do Garden, use um único elemento filho (<div>) para evitar o erro React.Children.only.
+Crie do zero um app Zendesk chamado "Disparos WhatsApp do Solicitante", localização ticket_sidebar, usando o App Builder. Ele lista o histórico de notificações WhatsApp associado ao solicitante do ticket a partir do objeto zendesk_labs_notifications_campaign_user. É um segundo app, separado do WhatsApp Individual da barra superior.
 
-1) IDENTIFICAÇÃO DO SOLICITANTE
-- Ler o solicitante via client.get('ticket.requester') (id, name, email).
-- Coletar todos os telefones: campo phone do usuário (GET /api/v2/users/{id}) e identidades do tipo phone_number (GET /api/v2/users/{id}/identities). Ignorar vazios e remover duplicados.
-- Ouvir 'ticket.requester.changed' para recarregar quando o solicitante mudar.
+Implemente a versão completa, em português brasileiro, com React e Zendesk Garden, respeitando os temas claro e escuro. Preserve o bootstrap do App Builder. Compile e informe exatamente o que verificou no código, em testes isolados e na conta. Não publique o app, não envie mensagens e não crie registros de teste durante a construção.
 
-2) NORMALIZAÇÃO E VARIAÇÕES DO TELEFONE (utils/phone.js, funções puras)
-No objeto, Phone Number está salvo como "+55DDDNUMERO" (ex.: +5551999998888 ou +555192563778). Para cada telefone do solicitante:
-- Remover tudo que não é dígito; remover prefixo "00" e zero de tronco/operadora no início (0XX51…, 051…).
-- Se tiver 10 ou 11 dígitos (DDD + número, sem país), prefixar 55.
-- Regra do nono dígito (Brasil, 55 + 2 dígitos de DDD + assinante):
-  - assinante com 9 dígitos começando com 9 (celular atual) → gerar também a variação SEM o 9 (o WhatsApp de contas antigas registra o número sem o 9);
-  - assinante com 8 dígitos começando com 6, 7, 8 ou 9 (celular no formato antigo) → gerar também a variação COM o 9 na frente;
-  - assinante com 8 dígitos começando com 2, 3, 4 ou 5 → fixo, não mexer.
-- Outros países: só os dígitos, sem regra do 9.
-- Para cada variação gerar "+55…" e "55…". Resultado: lista única de candidatos.
-- Incluir exemplos de teste: "(51) 99999-8888", "5199998888", "+55 51 9999-8888" e "555199998888" devem gerar candidatos que incluem "+5551999998888" e "+555199998888".
+0) SOMENTE LEITURA E PRÉ-REQUISITOS
+- Não enviar WhatsApp, chamar Notification API, criar, atualizar ou apagar tickets, usuários, identidades, objetos, campos, templates ou registros. Não alterar roteamento, permissões ou configurações.
+- São permitidos GETs de leitura e POST exclusivamente no endpoint de SEARCH dos registros, pois esse POST é uma consulta, não uma criação. Nunca usar POST /records de criação, PATCH, PUT ou DELETE.
+- Todas as chamadas Zendesk por client.request com caminhos relativos /api/v2/... e a sessão do agente. Sem credenciais Sunshine, token Support, parâmetros de segredo ou subdomínio fixo. Não precisa dos parâmetros scAppId/scKeyId/scKeySecret/scRegion do app de envio.
+- A conta precisa ter Relay messaging app (Zendesk Labs) instalado/configurado e os objetos zendesk_labs_notifications_campaign_user e zendesk_labs_notifications_template disponíveis com registros compatíveis. O app de envio grava o contexto; o serviço Notifications atualiza status/conversa. A sidebar apenas consulta os dados que existem.
+- No objeto de disparos, conferir campos ativos e únicos: phone_number (texto), user_id (lookup zen:user), template_id (lookup zen:custom_object:zendesk_labs_notifications_template), agent_sender (texto), user_name (texto) e status (tipo compatível do Relay). No objeto de templates, o campo template deve conter JSON legível em texto/textarea/regexp. Se a instalação usar outras keys, descobrir por schema e títulos correspondentes, sem adivinhar ou alterar campos.
+- Títulos de referência: Phone Number, User ID, Campaign Template ID, Agente remetente, User Name, Status; no objeto de templates, Template. Para agent_sender, aceitar a key exata ou título. Verificar tipos, destino de lookup e ambiguidade. Usar cache de schema na sessão, invalidável em Atualizar. Não usar um campo de mesmo título com destino incompatível.
+- Permissões: leitura de usuários/identidades, schemas e registros dos dois objetos, também para agentes comuns. Não solicitar permissão de escrita para a sidebar. Campos ausentes ou sem acesso precisam de aviso claro; não apresentar falha de consulta como lista vazia.
+- Em prévia fora do Zendesk, identificar explicitamente o mock e não fazer chamadas. Dados de exemplo não comprovam integração. Documentação: https://developer.zendesk.com/api-reference/custom-data/custom-objects/custom_object_records/ .
 
-3) BUSCA
-- POST /api/v2/custom_objects/zendesk_labs_notifications_campaign_user/records/search com filtro $or de $eq em custom_object_fields.phone_number para cada candidato (dividir em lotes se necessário). Paginar com page[after] até trazer tudo (limite 500).
-- Buscar também por custom_object_fields.user_id igual ao id do solicitante (o app de envio grava esse lookup), para cobrir telefones em outro formato.
-- Juntar e deduplicar por id do registro.
-- Solicitante sem telefone: buscar só por user_id e mostrar aviso discreto "Solicitante sem telefone cadastrado; mostrando envios vinculados ao usuário".
-- Template: template_id é lookup para zendesk_labs_notifications_template. Buscar os registros (GET .../zendesk_labs_notifications_template/records/{id}, cache em memória por id). O campo "template" guarda um JSON da Meta, ex.: {"name":"vc_esta_ai","components":[{"type":"BODY","text":"Oi, {{1}}, você está ai?"}],"language":"pt_BR","category":"MARKETING",...}. Fazer JSON.parse com try/catch e extrair: name, texto do componente BODY e, se existirem, textos de HEADER e FOOTER. Se o parse falhar, usar o name do registro do template. NUNCA exibir JSON cru. Não exibir idioma nem categoria.
-- Tratar HTTP 429 com espera e repetição (backoff).
+1) SOLICITANTE, CONCORRÊNCIA E CONTEXTO
+- Ler client.get('ticket.requester') para id, name e email. Sem solicitante válido, mostrar estado próprio e nenhuma consulta de registros.
+- Ler client.get('currentAccount.subdomain') para os links e client.get('currentUser') para currentUser.timeZone.ianaName. Fuso inválido/ausente: navegador. Não deduzir conta por window.location, que aponta para o iframe.
+- Ouvir ticket.requester.id.changed (evento documentado para troca do solicitante). Não depender apenas de ticket.requester.changed, usado no ZIP mas ausente da lista pública de eventos. Ao mudar solicitante ou atualizar, invalidar a execução anterior imediatamente, limpar os dados do solicitante anterior e recarregar. Nenhuma resposta atrasada pode aparecer para outro solicitante.
+- Usar contador de execução e verificações após cada await e antes de novas consultas. Ao desmontar, incrementar a versão, cancelar timers e remover o listener com client.off. Não atualizar estado de componente desmontado.
+- Carregar user.phone via GET /api/v2/users/{id}.json e identidades via GET /api/v2/users/{id}/identities.json, paginando as identidades até terminar. Considerar somente phone_number; não reinterpretar IDs Messaging.
+- Não deixar falha da leitura de telefones bloquear a consulta por user_id: tratar as duas fontes separadamente. Se uma fonte falhar, mostrar aviso e indicar resultados parciais. Diferenciar "sem telefone" de "não foi possível consultar telefones".
 
-4) DADOS DE CADA ENVIO
-- Título: nome do template (semibold).
-- Data/hora do envio (created_at, dd/mm/aaaa hh:mm no fuso do agente: currentUser.timeZone.ianaName, com fallback para o fuso do navegador) em texto pequeno secundário.
-- Texto do BODY num bloco tipo balão de mensagem (fundo levemente acinzentado do tema, raio 8px, fonte 13px), preservando variáveis {{1}}, limitado a 3 linhas com "ver mais".
-- Metadados em duas colunas (rótulo cinza à esquerda, valor à direita): Agente (agent_sender), Telefone (phone_number), Destinatário (user_name), Status (texto simples, sem badge/cor: sent = Enviado, delivered = Entregue, read = Lido, failed = Falhou; outro valor = texto original).
-- NÃO exibir Conversation ID nem Notification ID.
-- "Ver detalhes" somente quando o template tiver HEADER ou FOOTER (mostrar esses textos); caso contrário, não exibir.
-- Link "Abrir registro" (pequeno, com ícone de link externo) usando URL ABSOLUTA: obter client.get('currentAccount.subdomain') e montar https://{subdomain}.zendesk.com/agent/custom-objects/zendesk_labs_notifications_campaign_user/records/{id}, com target="_blank" rel="noopener noreferrer". (URL relativa abre no domínio do iframe *.apps.zdusercontent.com e quebra.)
+2) TELEFONES — CANDIDATOS DE BUSCA, NUNCA DE ENVIO
+- Implementar funções puras em utils/phone.js. Preservar as fontes e deduplicar candidatos.
+- Esta regra é diferente da validação estrita de envio do WhatsApp Individual. Nunca reutilizá-la para escolher um número de destino ou alterar cadastros.
+- Detectar + internacional ou prefixo 00 ANTES de remover a formatação. Com DDI internacional explícito, preservar o país: um número estrangeiro com 10/11 dígitos não deve receber 55 por causa do tamanho.
+- Sem prefixo internacional explícito, considerar números locais brasileiros no contexto desta regra: DDD + 8/9 dígitos pode receber 55 só como candidato de pesquisa; validar DDD e comprimento. Remover zero de tronco ou código de operadora apenas quando a estrutura brasileira for inequívoca. Não aplicar essa remoção a números internacionais explícitos.
+- Para Brasil (55 + DDD + assinante): assinante com 9 dígitos iniciados por 9 gera também variação sem esse 9; assinante com 8 dígitos iniciado por 6, 7, 8 ou 9 gera também variação com 9; fixo de 8 dígitos iniciado por 2, 3, 4 ou 5 não muda.
+- Para cada variação, gerar número com + e só dígitos. Outros países não usam a regra do nono dígito.
+- Separar telefones múltiplos só por vírgula, ponto e vírgula ou quebra de linha; nunca juntar dois números num único candidato nem separar espaços de formatação.
+- Testar que (51) 99999-8888, 5199998888, +55 51 9999-8888 e 555199998888 geram candidatos contendo +5551999998888 e +555199998888. Testar fixo brasileiro, prefixos 00/tronco/operadora e internacionais explícitos, incluindo +14155552671, que deve continuar no país 1, sem prefixar 55.
+- Variações ampliam a busca e não comprovam identidade. Se um registro trouxer user_id preenchido e diferente do solicitante, não exibi-lo apenas por coincidência de telefone. Para registros sem vínculo, manter a correspondência por telefone como compatibilidade e explicar essa limitação na documentação.
 
-5) FILTROS (no front, sobre os registros carregados)
-- Busca livre com ícone de lupa em primeiro lugar, sem diferenciar maiúsculas/acentos: agente remetente, nome e texto do template, status, nome do destinatário e telefone.
-- Atalhos de período como grupo pequeno de chips/segmented: 7d, 30d, 90d, Tudo (selecionado destacado).
-- Datas De/Até recolhidas num link "Período personalizado" que expande.
-- "Limpar filtros" como link discreto que só aparece com filtro ativo. Contador "X de Y envios".
+3) BUSCA DOS REGISTROS
+- Consultar POST /api/v2/custom_objects/zendesk_labs_notifications_campaign_user/records/search com contentType application/json, corpo { filter: ... }, page[size]=100 e sort=-created_at.
+- Consulta por usuário: { "custom_object_fields.<key_user_id>": { "$eq": String(requester.id) } }. Priorizar essa consulta para que ela não seja descartada se as consultas por telefone chegarem ao limite.
+- Consulta por telefones: { "$or": [{ "custom_object_fields.<key_phone_number>": { "$eq": candidato } }, ...] }. Lotes de até 8 candidatos.
+- Paginar com page[after] de meta.after_cursor enquanto meta.has_more. Proteger contra cursor repetido, página vazia com has_more, resposta inválida e execução obsoleta. Não seguir uma URL de paginação de outra origem.
+- Unir por id do registro e ordenar por created_at decrescente. Limite global de 500 registros únicos; a paginação visual de 10 não substitui a paginação da API.
+- Se qualquer consulta/página não puder ser concluída ou o limite de 500 for atingido antes de esgotar as fontes, mostrar aviso de resultados limitados/parciais. Não prometer que são os 500 envios mais recentes globais se as fontes não foram integralmente comparadas. Os filtros atuam somente sobre o que foi carregado.
+- Sem telefones válidos, buscar só pelo usuário e mostrar "Solicitante sem telefone cadastrado; mostrando envios vinculados ao usuário". Se houver erro de telefone, usar aviso diferente, preservando os resultados pelo usuário.
+- HTTP 429: usar autoRetry:false para controlar uma única política explícita, até 4 novas tentativas (5 chamadas totais), backoff base 1 s exponencial, respeitando Retry-After quando acessível e prazo/cancelamento. Não repetir indefinidamente e não fazer retry de 401/403/404 como se fossem ausência de dados.
 
-6) VISUAL (moderno e elegante, sem exagero)
-- Cabeçalho compacto: "N envios · último há X dias" em texto secundário + ação "Atualizar".
-- Lista em linha do tempo: linha vertical sutil à esquerda e um ponto pequeno por envio (tom suave conforme status, sem badge); agrupada por mês com cabeçalho em caixa alta pequena e cor secundária; mais recente primeiro.
-- Card: fundo da superfície do tema, borda 1px sutil, raio 8px, padding 12px, sombra leve só no hover.
-- Espaçamento consistente 8/12/16px, base 14px, sem excesso de ícones ou cores. Paginação no front de 10 em 10 com "Carregar mais".
-- Estados: skeleton no formato dos cards ao carregar; vazio com ícone discreto e "Nenhum disparo encontrado para este solicitante"; erro com "Tentar novamente".
-- client.invoke('resize') para caber o conteúdo.
+4) TEMPLATES E MODELO DE EXIBIÇÃO
+- template_id é o ID de um registro de zendesk_labs_notifications_template, não o ID de um template Meta.
+- GET /api/v2/custom_objects/zendesk_labs_notifications_template/records/{id}, com IDs codificados. Resolver IDs únicos em lotes de até 5 chamadas paralelas. Cache por id, reutilizando promessas em andamento; invalidar ao Atualizar. Não armazenar permanentemente no cache falhas transitórias como se fossem sucesso.
+- O campo template contém JSON Meta. Usar JSON.parse com try/catch; a V3 espera objeto de topo { name, components }. Extrair nome, BODY textual, HEADER textual e FOOTER textual. Exibir tudo como texto, nunca dangerouslySetInnerHTML e nunca JSON cru.
+- Preservar marcadores {{1}} e {{nome}}: o objeto de template não guarda necessariamente os valores efetivamente enviados. Não reconstruir nem inventar o conteúdo personalizado do disparo.
+- JSON inválido: usar o name do registro de template; template ausente/sem acesso: usar "Template indisponível" ou "Sem template" com aviso adequado. Continuar mostrando os demais dados do envio, sem ocultar erro de permissão.
+- Não exibir idioma, categoria, Notification ID, Conversation ID nem botões para copiá-los. Não incluí-los como campos visíveis em Ver detalhes.
+- Modelo do card: id, createdAt, template (nome), templateBody, templateHeader, templateFooter, status, agent (agent_sender), phone (phone_number), userName (user_name). Não depender de campos fora do schema verificado.
 
-7) REGRAS TÉCNICAS
-- client.request para todas as chamadas (sem tokens no código), caminhos relativos da API.
-- Separar em utils/phone.js, utils/api.js (busca, paginação, cache), utils/template.js (parse do JSON), utils/filters.js e componentes (lista, card, filtros, estados).
-- mock.js com dados de exemplo para a prévia do App Builder.
-Compile a versão e relate arquivos e decisões. Não publique.
+5) CARD E LINK DO REGISTRO
+- Título: nome técnico do template em semibold.
+- Data/hora: created_at em dd/mm/aaaa hh:mm, usando o fuso do agente. Agrupamento mensal usa o mesmo fuso.
+- BODY em balão com cor sutil do tema, raio 8 px, fonte 13 px, quebra de linha preservada e limite de 3 linhas. Mostrar ver mais/ver menos quando houver truncamento real: medir scrollHeight/clientHeight após render e em redimensionamento, em vez de depender só de 150 caracteres ou três quebras explícitas.
+- Metadados em duas colunas, rótulo discreto e valor: Agente, Telefone, Destinatário, Status. Vazio pode ser "-".
+- Status em texto normal, sem badge colorida: sent=Enviado; delivered=Entregue; read=Lido; failed=Falhou; desconhecido mantém o texto original. A cor pode aparecer apenas no pequeno ponto da linha do tempo, com tokens do tema. Sem alegar entrega/leitura se o campo não trouxer esse status.
+- Ver detalhes somente se houver HEADER ou FOOTER textual; mostrar apenas esses textos. Se ambos faltarem, não mostrar esse botão. Os demais dados ficam sempre visíveis.
+- Link Abrir registro absoluto: https://{subdomain}.zendesk.com/agent/custom-objects/zendesk_labs_notifications_campaign_user/records/{encodeURIComponent(id)}, target="_blank", rel="noopener noreferrer". Validar o subdomínio obtido do contexto. Sem subdomínio, omitir o link e mostrar aviso; nunca usar o domínio do iframe nem URL relativa.
+
+6) FILTROS E CONTAGEM
+- Estado inicial: { from:'', to:'', query:'', preset:'all' }. Busca livre no topo, ícone de lupa e label acessível Buscar.
+- Buscar sem diferenciar maiúsculas ou acentos em agente, nome/BODY/HEADER/FOOTER do template, status, destinatário e telefone. Pesquisar tanto o status bruto quanto a tradução exibida: buscar Lido precisa encontrar read.
+- Atalhos pequenos: 7 dias, 30 dias, 90 dias e Tudo, com aria-pressed e seleção visível. Datas De/Até ficam recolhidas em Período personalizado.
+- Limpar filtros aparece somente com filtro ativo. Contador visível "X de Y envios", com X = total filtrado e Y = carregado, além do resumo geral. Se os resultados forem parciais, deixar isso próximo do contador.
+- Datas inclusivas, no mesmo fuso usado na exibição. Não combinar silenciosamente exibição no fuso do agente com limites no fuso do navegador. Validar datas reais e De <= Até; campos inválidos recebem erro claro. Nenhum filtro deve disparar novas consultas à API.
+- Ao mudar filtros ou solicitante, reiniciar a paginação visual em 10. Atualizar recarrega dados e caches mantendo apenas filtros que fizer sentido preservar, sem misturar solicitantes.
+
+7) UX, ESTADOS E RESIZE
+- Cabeçalho: "N envios · último há X dias", ação Atualizar, contador de filtragem próximo dos filtros.
+- Linha do tempo vertical sutil, ponto por envio e grupos por mês em caixa alta discreta; mais recente primeiro.
+- Card com borda sutil 1 px, raio 8 px, padding 12 px e sombra leve no hover. Espaçamento 8/12/16 px e texto base 14 px. Usar tokens de tema para superfícies, bordas, texto e status; sem cores fixas para estados.
+- Estados: carregando com skeletons de cards; sem solicitante; sem registros; sem correspondência aos filtros; parcial/limitado; erro com Tentar novamente; acesso negado. Em erro, não manter visível o histórico do solicitante anterior.
+- Todo Alert e componente que exigir React.Children.only deve ter um único elemento filho (por exemplo, div envolvendo título, parágrafo e botão). Erros sanitizados e curtos; não renderizar responseText/responseJSON completos nem JSON.stringify do erro na interface.
+- Carregar mais mostra 10 adicionais, sem recarregar a API.
+- Resize com largura 100% e altura mínima próxima de 300 px. Usar ResizeObserver no conteúdo, desconectado na desmontagem, e só invocar resize quando a altura variar materialmente. Isso precisa funcionar também ao abrir BODY/Ver detalhes ou datas, que mudam estado de componentes filhos. Nunca criar um ciclo de resize nem rolagem horizontal.
+
+8) ORGANIZAÇÃO E VALIDAÇÃO
+- Módulos pequenos: constants; utils/phone, api, schema, template, filters, format; componentes SummaryHeader, Filters, DispatchList, DispatchCard, estados e ícones; styles. Mock explicitamente identificado só para prévia.
+- Testes isolados, sem rede/escrita: normalização brasileira e internacional; múltiplos telefones; deduplicação; POST de busca com corpo e cursor corretos; página vazia/cursor repetido; limite e aviso; user_id quando telefones falham; vínculo conflitante; cache de template e falha transitória; JSON inválido; preservação dos marcadores; status bruto/traduzido; busca sem acentos; datas/fuso/inversão; link absoluto codificado; solicitante mudando durante consulta; cancelamento/desmontagem; ver mais por overflow real; resize de filhos; nenhum endpoint de escrita.
+- Na conta, validar somente leituras com agente autorizado: solicitante, identidades, objetos, resultados, filtros, tema, links e resize. Não usar dados simulados para declarar integração real. Não enviar mensagens nem alterar o solicitante de um ticket para executar testes; simular eventos nos testes isolados.
+- Ao entregar, relatar o que está implementado e não testado. O pacote V3 é uma referência, com limitações conhecidas; não afirmar que copiar o prompt dispensa preparo ou garante código idêntico. Não publicar automaticamente.
 ```
 
----
+## Depois da geração
 
-## Depois que o App Builder terminar
+Confira as leituras com um agente da operação e siga o [roteiro de validação](../docs/02-validacao.md). Quando decidir publicar, recarregue o ticket: Cmd+Shift+R no Mac ou Ctrl+Shift+R no Windows/Linux. A sidebar não exige um envio novo para ser testada quando já há registros compatíveis.
 
-Quando decidir publicar, recarregue a aba do ticket (**Cmd+Shift+R no Mac; Ctrl+Shift+R no Windows/Linux**) e abra um ticket cujo solicitante já recebeu um template pelo app WhatsApp Individual. Valide separadamente a correspondência de usuário e telefones, a paginação e as permissões.
+## Diferenças intencionais da nova geração
 
+O prompt mantém o layout final da V3 e acrescenta: verificação de schema; preservação de DDI explícito; consulta por usuário apesar de falhas de telefone; proteção contra resultados conflitantes; avisos de truncamento; contador X de Y; datas no fuso consistente; busca por status traduzido; cache atualizável; erros sanitizados; resize por observação; proteção na desmontagem. São requisitos para o novo app, não mudanças realizadas no ZIP original.

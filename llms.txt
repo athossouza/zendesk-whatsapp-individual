@@ -9,20 +9,22 @@
 - Integração de registro: Relay messaging app / Zendesk Labs Notifications; objeto zendesk_labs_notifications_campaign_user; External ID = notificationId; objeto zendesk_labs_notifications_template para lookup do template.
 - Campos importantes: User ID como lookup zen:user; agent_sender como texto; o app não grava notes, status, conversation_id, campaign_id ou name.
 - Não faz envio em massa, campanhas, agendamento, criação de tickets ou mudanças de roteamento.
-- Configuração e homologação na conta são necessárias. Os testes locais da referência não comprovam funcionamento em toda instância. A sidebar não está no ZIP V17 do app principal.
-- Capturas do README são reais, com dados pessoais ocultos. Não foi realizado envio para produzir os visuais.
+- Configuração e homologação na conta são necessárias. Os testes locais da referência não comprovam funcionamento em toda instância. Referências disponíveis: ZIP V17 do app principal e ZIP V3 da sidebar, ambos analisados com as conversas exportadas. O prompt da sidebar inclui melhorias sobre limitações da V3, detalhadas na auditoria própria.
+- O README usa composições gráficas estáticas de capturas reais, com dados pessoais ocultos, sem GIF ou vídeo. Não foi realizado envio para produzir os visuais.
 
 ## Documentação
 
 - [Visão geral e recursos](https://github.com/athossouza/zendesk-whatsapp-individual/blob/main/README.md)
 - [Prompt completo do app principal](https://github.com/athossouza/zendesk-whatsapp-individual/blob/main/prompts/01-app-whatsapp-individual.txt)
-- [Prompt do histórico na sidebar](https://github.com/athossouza/zendesk-whatsapp-individual/blob/main/prompts/02-app-disparos-sidebar.md)
+- [Prompt do histórico na sidebar](https://github.com/athossouza/zendesk-whatsapp-individual/blob/main/prompts/02-app-disparos-sidebar.txt)
 - [Relay, objetos, campos e permissões](https://github.com/athossouza/zendesk-whatsapp-individual/blob/main/docs/01-pre-requisitos.md)
 - [Validação na instância](https://github.com/athossouza/zendesk-whatsapp-individual/blob/main/docs/02-validacao.md)
 - [Auditoria e limites da evidência](https://github.com/athossouza/zendesk-whatsapp-individual/blob/main/docs/03-auditoria-v17.md)
+- [Auditoria da sidebar V3](https://github.com/athossouza/zendesk-whatsapp-individual/blob/main/docs/05-auditoria-sidebar-v3.md)
 - [Origem dos visuais](https://github.com/athossouza/zendesk-whatsapp-individual/blob/main/docs/04-visuais-e-descoberta.md)
 - [Autor e consultoria](https://consultor.cx)
 
 ## English summary
 
 Zendesk App Builder prompts for individual approved WhatsApp template notifications, plus a read-only ticket sidebar history. Uses Sunshine Conversations and Zendesk Labs Relay custom objects. Account configuration and validation are required. Independent project; not an official Zendesk or Meta product.
+

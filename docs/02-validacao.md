@@ -67,4 +67,29 @@ Essa inspeção contém dados de usuários e agentes; não a publique como log d
 | `template_id` vazio | Registro existente no Relay com JSON legível, nome/idioma/canal e correspondência única |
 | Interface não mudou | Recarregar Agent Workspace após publicar |
 
-O app de histórico na sidebar é opcional e tem [prompt separado](../prompts/02-app-disparos-sidebar.md). Seu código não veio no ZIP V17; valide-o separadamente.
+O app de histórico na sidebar é opcional e tem [prompt separado](../prompts/02-app-disparos-sidebar.md). Seu código e a conversa estão disponíveis no pacote V3; consulte a [auditoria da sidebar](05-auditoria-sidebar-v3.md) e valide a nova geração separadamente.
+
+
+## Validação específica da sidebar V3 e da nova geração
+
+A [referência V3](../reference/disparosWhatsappDoSolicitante-V3.zip) foi analisada; as melhorias do [novo prompt](../prompts/02-app-disparos-sidebar.txt) ainda precisam ser implementadas pelo App Builder e verificadas:
+
+- [ ] Identifica o solicitante do ticket sem solicitar credenciais Sunshine; consultas usam a sessão do agente.
+- [ ] Lê `phone_number` das identidades com paginação e consulta registros por `user_id` mesmo se uma fonte de telefone falhar.
+- [ ] Não mostra registros vinculados explicitamente a outro usuário apenas por coincidência de telefone; avisa sobre resultados parciais e o limite global.
+- [ ] Nome e BODY do template vêm do JSON, preservando marcadores; HEADER/FOOTER aparecem só em Ver detalhes. Não mostra idioma, categoria ou IDs de notificação/conversa.
+- [ ] Exibe status em português e encontra `read` ao buscar por “Lido”. Filtros de data usam o fuso da exibição e rejeitam intervalo inválido.
+- [ ] Contador X de Y, paginação de 10, ver mais por overflow e resize funcionam sem cortar o card, inclusive ao expandir conteúdo.
+- [ ] Abrir registro leva à instância correta em nova aba; subdomínio ausente não gera link relativo ao iframe.
+- [ ] Atualizar invalida caches; falha temporária de template pode se recuperar. Troca de solicitante e desmontagem invalidam respostas anteriores.
+- [ ] A rede contém apenas GETs e POSTs de `/records/search`; não há criação, atualização, exclusão ou envio de WhatsApp.
+
+Use um ticket já existente e os registros disponíveis para a verificação de leitura. Não altere o solicitante de um ticket nem crie/envie dados só para reproduzir um cenário; condições de troca, erro e concorrência devem ser simuladas nos testes isolados.
+
+Verificações locais da referência:
+
+```sh
+node scripts/verificar-sidebar.mjs
+```
+
+O resultado distingue **20 cenários de comportamento** de **6 limitações confirmadas**. Uma limitação caracterizada não significa que foi corrigida no ZIP ou no app instalado; veja a [auditoria](05-auditoria-sidebar-v3.md).
